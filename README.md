@@ -54,9 +54,9 @@ Add the Maven dependency:
 
 ```xml
 <dependency>
-  <groupId>io.tarantool</groupId>
-  <artifactId>spring-data-tarantool</artifactId>
-  <version>0.4.0</version>
+    <groupId>io.tarantool</groupId>
+    <artifactId>spring-data-tarantool</artifactId>
+    <version>0.4.0</version>
 </dependency>
 ```
 
@@ -108,9 +108,11 @@ public interface BookRepository extends TarantoolRepository<Book, Long> {
 }
 ```
 
-The `@Tuple` annotation allows to specify the space name which schema will be used for forming the data tuples, and
-the `@Field` annotations provide custom names for the fields. It is necessary to have at least one field marked with the
-`@Id` annotation.
+The `@Tuple` annotation allows to specify the space name which schema will be used for forming the data tuples.
+You can add `@Tuple` on the `@Query` annotated method that specify space name for specific internal function call.
+Also, you can add `@Tuple` annotation to the repository - it is shortcut for specifying space name for all methods
+in this repository. The `@Field` annotations provide custom names for the fields. It is necessary to have at least 
+one field marked with the `@Id` annotation.
 
 Extending `CrudRepository` causes CRUD methods being pulled into the
 interface so that you can easily save and find single entities and
@@ -170,21 +172,21 @@ This will find the repository interface and register a proxy object in the conta
 @Service
 public class MyService {
 
-  private final BookRepository repository;
+    private final BookRepository repository;
 
-  @Autowired
-  public MyService(BookRepository repository) {
-    this.repository = repository;
-  }
+    @Autowired
+    public MyService(BookRepository repository) {
+        this.repository = repository;
+    }
 
-  public void doWork() {
-    Book book = new Book();
-    book.setName("Le Petit Prince");
-    book.setAuthor("Antoine de Saint-Exupéry");
-    book = repository.save(book);
+    public void doWork() {
+        Book book = new Book();
+        book.setName("Le Petit Prince");
+        book.setAuthor("Antoine de Saint-Exupéry");
+        Book savedBook = repository.save(book);
 
-    List<Book> allBooks = repository.findAll();
-  }
+        List<Book> allBooks = repository.findAll();
+    }
 }
 ```
 
@@ -217,13 +219,88 @@ The corresponding function in on Tarantool Cartridge router may look like (uses 
 
 See more examples in the module tests.
 
+#### Call stored functions in Tarantool instance
+
+You can bind repository methods to calls of the stored functions in the Tarantool instance using the `@Query` annotation
+with the stored function name specified in the `functionName` parameter.
+For such methods, you can specify the stored function response format so that it will be parsed correctly. The response
+format may be either an object (and a list of objects) or a tuple (and a list of tuples).
+
+```java
+@Data
+@Tuple
+public class SampleUser {
+    private String name;
+    private String lastName;
+}
+```
+
+```java
+public interface SampleUserRepository extends TarantoolRepository<SampleUser, String> {
+    @Query(function = "returning_sample_user_object")
+    SampleUser returningSampleUserObject(String name);
+
+    @Query(function = "get_predefined_users")
+    List<SampleUser> getPredefinedUsers();
+}
+```
+
+```java
+@Tuple
+public class Book {
+  @Id
+  private Integer id;
+  private String name;
+}
+
+// by default, schema name is another_space for all CRUD standard methods
+@Tuple("another_space") 
+public interface BookRepository extends TarantoolRepository<Book, Integer> {
+    
+    // it overrides schema name to test_space for current method
+    @Tuple("test_space") 
+    @Query(function = "do_something")
+    Optional<Book> doSomething(Book book);
+}
+```
+
+By default, schema name is book_entity because schema name not specified 
+on the entity class and on the repository. In this case schema name being 
+name of entity class in snake_case, but for "doSomething" method space name 
+is a test_space.
+```java
+@Tuple
+public class BookEntity {
+  @Id
+  private Integer id;
+  private String name;
+}
+
+public interface BookRepository extends TarantoolRepository<BookEntity, Integer> {
+    
+    // it overrides schema name to test_space for current method
+    @Tuple("test_space") 
+    @Query(function = "do_something")
+    void doSomething(Book book);
+}
+```
+
+```lua
+function returning_sample_user_object()
+    return { name = "John", lastName = "Smith" }
+end
+
+function get_predefined_users()
+    return { { name = "John", lastName = "Smith" }, { name = "Sam", lastName = "Smith" } }
+end
+```
+
 ### Composite primary key
 
-You can create an entity representing a Tarantool tuple with composite 
-primary index. For this you need to use @TarantoolIdClass annotation on entity
-to specify the type of id. Also you may mark all 'id' fields in the entity 
-with standard @Id annotation. @Id annotation on properties is optional but
-It is recommended to use it to make code more clear.
+You can create an entity representing a Tarantool tuple with composite primary index. For this you need to use
+@TarantoolIdClass annotation on entity to specify the type of id. Also you may mark all 'id' fields in the entity with
+standard @Id annotation. @Id annotation on properties is optional but It is recommended to use it to make code more
+clear.
 
 See the example:
 
@@ -245,12 +322,11 @@ public class BookTranslation {
     private String language;
     @Id
     private Integer edition;
-    
     private String translator;
     private String comments;
 }
 
-public interface BookTranslationRepository 
+public interface BookTranslationRepository
         extends TarantoolRepository<BookTranslation, BookTranslationId> {
 }
 
@@ -258,8 +334,7 @@ public interface BookTranslationRepository
 
 ## Contributing to Spring Data Tarantool
 
-Contributions and issues are welcome, feel free to add them to this
-project or offer directly in the Tarantool community chat or on
-StackOverflow using the [tarantool](https://stackoverflow.com/questions/tagged/tarantool)
+Contributions and issues are welcome, feel free to add them to this project or offer directly in the Tarantool community
+chat or on StackOverflow using the [tarantool](https://stackoverflow.com/questions/tagged/tarantool)
 tag.
 

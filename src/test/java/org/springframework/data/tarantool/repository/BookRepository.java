@@ -1,5 +1,6 @@
 package org.springframework.data.tarantool.repository;
 
+import org.springframework.data.tarantool.core.mapping.Tuple;
 import org.springframework.data.tarantool.entities.Book;
 
 import java.util.List;
@@ -7,10 +8,8 @@ import java.util.List;
 /**
  * @author Alexey Kuzin
  */
+@Tuple("test_space")
 public interface BookRepository extends TarantoolRepository<Book, Integer> {
-//    List<Book> findByAuthor(String author);
-//
-//    List<Book> findByYearGreaterThan(Integer year);
 
     @Query(function = "find_by_complex_query")
     List<Book> findByYearGreaterThenProxy(Integer year);

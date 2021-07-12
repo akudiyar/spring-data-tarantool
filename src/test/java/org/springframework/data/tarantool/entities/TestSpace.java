@@ -9,13 +9,10 @@ import org.springframework.data.tarantool.core.mapping.Tuple;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * @author Alexey Kuzin
- */
 @Data
+@Tuple
 @Builder
-@Tuple("test_space")
-public class Book {
+public class TestSpace {
     @Id
     private Integer id;
 
